@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  go-app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      - CONFIG_PATH=/root/config/local.yml
+    volumes:
+      - "../config:/root/config"
+    ports:
+      - "8082:8082"
