@@ -11,7 +11,7 @@ import (
 type Config struct {
     Env string `yaml:"env" env:"ENV" env-default:"prod"`
     Storage string `yaml:"storage_path" env-required="true"`
-    HTTPServer `yaml:"idle_timeout"`
+    HTTPServer `yaml:"http_server"`
 }
 
 type HTTPServer struct {
