@@ -3,6 +3,7 @@ package sqlite
 import (
     "database/sql"
     "fmt"
+	_ "github.com/mattn/go-sqlite3" // init sqlite3 driver
 )
 
 type Storage struct {
@@ -32,5 +33,5 @@ func New(storagePath string) (*Storage, error) {
         return nil, fmt.Errorf("%s %w", op, err)
     }
 
-    return & {db, db}, nil
+    return &Storage{db: db}, nil
 }
