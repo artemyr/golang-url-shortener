@@ -8,10 +8,12 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o app ./cmd/url-shortener
+RUN CGO_ENABLED=1 GOOS=linux go build -o app ./cmd/url-shortener
 
 # ---------- runtime stage ----------
-FROM alpine:latest
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y sqlite3 libsqlite3-0 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /root/
 
