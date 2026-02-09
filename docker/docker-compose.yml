@@ -3,10 +3,26 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    environment:
-      - CONFIG_PATH=/root/config/local.yml
+    env_file: ../.env
     volumes:
-      - "../config:/root/config"
-      - "../storage:/root/storage"
+      - ../config:/root/config
+      - ../storage:/root/storage
     ports:
       - "8082:8082"
+
+  go-dev:
+    image: golang:1.25
+    env_file: ../.env
+    working_dir: /app
+    volumes:
+      - ..:/app
+      - go-mod-cache:/go/pkg/mod
+      - ../config:/root/config
+      - ../storage:/root/storage
+    ports:
+      - "8082:8082"
+    command: sh -c "go install github.com/air-verse/air@latest && air"
+
+
+volumes:
+  go-mod-cache:
