@@ -1,10 +1,12 @@
 package main
 
 import (
+    "net/http"
 	"log/slog"
 	"os"
 	"url-shortener/internal/config"
 	mwLogger "url-shortener/internal/http-server/middleware/logger"
+	"url-shortener/internal/http-server/handlers/url/save"
 	"url-shortener/internal/lib/logger/handlers/slogpretty"
 	"url-shortener/internal/lib/logger/sl"
 	"url-shortener/internal/storage/sqlite"
@@ -24,7 +26,6 @@ func main() {
 
 	log := setupLogger(cfg.Env)
 
-	//     log.With(slog.String("env", cfg.Env))
 	log.Info("starting url-shortener", slog.String("env", cfg.Env))
 	log.Debug("debug messages are enabled")
 
@@ -41,35 +42,23 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	// url, err := storage.GetURL("google")
-	// if err != nil {
-	// 	log.Error("failed to get url", sl.Err(err))
-	// 	os.Exit(1)
-	// }
+	router.Post("/url", save.New(log, storage))
 
-	// log.Info("saved url is", slog.String("url", url))
+	log.Info("starting server", slog.String("address", cfg.Address))
 
-	// url, err = storage.GetURL("error")
-	// if err != nil {
-	// 	log.Error("failed to get url", sl.Err(err))
-	// 	os.Exit(1)
-	// }
+	srv := &http.Server{
+	    Addr: cfg.Address,
+	    Handler: router,
+	    ReadTimeout: cfg.HTTPServer.Timeout,
+	    WriteTimeout: cfg.HTTPServer.Timeout,
+	    IdleTimeout: cfg.HTTPServer.IdleTimeout,
+	}
 
-	// id, err := storage.SaveURL("https://google.com", "google")
-	// if err != nil {
-	//     log.Error("failed to save url", sl.Err(err))
-	//     os.Exit(1)
-	// }
+	if err := srv.ListenAndServe(); err != nil {
+	    log.Error("failed to start server")
+	}
 
-	// log.Info("saved url", slog.Int64("id", id))
-
-	// id, err = storage.SaveURL("https://google.com", "google")
-	// if err != nil {
-	//     log.Error("failed to save url", sl.Err(err))
-	//     os.Exit(1)
-	// }
-
-	_ = storage
+    log.Error("server stopped")
 }
 
 func setupLogger(env string) *slog.Logger {
