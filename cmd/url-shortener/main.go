@@ -1,9 +1,14 @@
 package main
 
 import (
+    "context"
     "net/http"
 	"log/slog"
 	"os"
+    "os/signal"
+    "syscall"
+    "time"
+
 	"url-shortener/internal/config"
 	mwLogger "url-shortener/internal/http-server/middleware/logger"
 	"url-shortener/internal/http-server/handlers/url/save"
@@ -48,6 +53,9 @@ func main() {
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 
+    done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
 	srv := &http.Server{
 	    Addr: cfg.Address,
 	    Handler: router,
@@ -56,11 +64,30 @@ func main() {
 	    IdleTimeout: cfg.HTTPServer.IdleTimeout,
 	}
 
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-        log.Error("failed to start server", sl.Err(err))
+    go func() {
+        if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+            log.Error("failed to start server", sl.Err(err))
+        }
+    }()
+
+	log.Info("server started")
+
+    <-done
+    log.Info("stopping server")
+
+    // TODO: move timeout to config
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
+
+    if err := srv.Shutdown(ctx); err != nil {
+        log.Error("failed to stop server", sl.Err(err))
+
+        return
     }
 
-    log.Error("server stopped")
+    // TODO: close storage
+
+    log.Info("server stopped")
 }
 
 func setupLogger(env string) *slog.Logger {
