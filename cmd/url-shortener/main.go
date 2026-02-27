@@ -1,19 +1,19 @@
 package main
 
 import (
-    "context"
-    "net/http"
+	"context"
 	"log/slog"
+	"net/http"
 	"os"
-    "os/signal"
-    "syscall"
-    "time"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"url-shortener/internal/config"
-	mwLogger "url-shortener/internal/http-server/middleware/logger"
-	"url-shortener/internal/http-server/handlers/url/save"
-	"url-shortener/internal/http-server/handlers/redirect"
 	"url-shortener/internal/http-server/handlers/delete"
+	"url-shortener/internal/http-server/handlers/redirect"
+	"url-shortener/internal/http-server/handlers/url/save"
+	mwLogger "url-shortener/internal/http-server/middleware/logger"
 	"url-shortener/internal/lib/logger/handlers/slogpretty"
 	"url-shortener/internal/lib/logger/sl"
 	"url-shortener/internal/storage/sqlite"
@@ -49,47 +49,54 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	router.Post("/url/save", save.New(log, storage))
+	router.Route("/url", func(r chi.Router) {
+		r.Use(middleware.BasicAuth("url-shortener", map[string]string{
+			cfg.HTTPServer.User: cfg.HTTPServer.Password,
+		}))
+
+		router.Post("/", save.New(log, storage))
+		router.Delete("/{alias}", delete.New(log, storage))
+	})
+
 	router.Get("/url/get/{alias}", redirect.New(log, storage))
-	router.Delete("/url/delete/{alias}", delete.New(log, storage))
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 
-    done := make(chan os.Signal, 1)
+	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	srv := &http.Server{
-	    Addr: cfg.Address,
-	    Handler: router,
-	    ReadTimeout: cfg.HTTPServer.Timeout,
-	    WriteTimeout: cfg.HTTPServer.Timeout,
-	    IdleTimeout: cfg.HTTPServer.IdleTimeout,
+		Addr:         cfg.Address,
+		Handler:      router,
+		ReadTimeout:  cfg.HTTPServer.Timeout,
+		WriteTimeout: cfg.HTTPServer.Timeout,
+		IdleTimeout:  cfg.HTTPServer.IdleTimeout,
 	}
 
-    go func() {
-        if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-            log.Error("failed to start server", sl.Err(err))
-        }
-    }()
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error("failed to start server", sl.Err(err))
+		}
+	}()
 
 	log.Info("server started")
 
-    <-done
-    log.Info("stopping server")
+	<-done
+	log.Info("stopping server")
 
-    // TODO: move timeout to config
-    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-    defer cancel()
+	// TODO: move timeout to config
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-    if err := srv.Shutdown(ctx); err != nil {
-        log.Error("failed to stop server", sl.Err(err))
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Error("failed to stop server", sl.Err(err))
 
-        return
-    }
+		return
+	}
 
-    // TODO: close storage
+	// TODO: close storage
 
-    log.Info("server stopped")
+	log.Info("server stopped")
 }
 
 func setupLogger(env string) *slog.Logger {

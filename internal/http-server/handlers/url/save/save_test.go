@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -71,7 +70,10 @@ func TestSaveHandler(t *testing.T) {
 
 			handler := save.New(slogdiscard.NewDiscardLogger(), urlSaverMock)
 
-			input := fmt.Sprintf(`{"url": "%s", "alias": "%s"}`, tc.url, tc.alias)
+			input, _ := json.Marshal(map[string]string{
+				"url":   tc.url,
+				"alias": tc.alias,
+			})
 
 			req, err := http.NewRequest(http.MethodPost, "/save", bytes.NewReader([]byte(input)))
 			require.NoError(t, err)
@@ -79,7 +81,7 @@ func TestSaveHandler(t *testing.T) {
 			rr := httptest.NewRecorder()
 			handler.ServeHTTP(rr, req)
 
-			require.Equal(t, rr.Code, http.StatusOK)
+			require.Equal(t, http.StatusOK, rr.Code)
 
 			body := rr.Body.String()
 

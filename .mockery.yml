@@ -2,3 +2,6 @@ packages:
   url-shortener/internal/http-server/handlers/url/save:
     interfaces:
       URLSaver:
+  url-shortener/internal/http-server/handlers/redirect:
+    interfaces:
+      URLGetter:

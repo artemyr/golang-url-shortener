@@ -5,3 +5,6 @@ up:
 
 install:
 	go mod tidy
+
+test:
+	go test ./...

@@ -1,19 +1,40 @@
-в папке docker
+# URL Shortener
 
-запустить контейнер
+## Локалка
 
-`docker compose up go-app --build`
+### Запуск
 
-установить какую-нибудь зависимость
+в конрне проекта
+
+`make up` - запуск 
+
+`go get github.com/ilyakaznacheev/cleanenv` - установка пакета
+
+`go test ./...` - тесты
+
+___
+
+## Docker
+`cd docker`
+
+запустить контейнер `make up`
+
+### Установка зависимостей
 
 в корне проекта
 
 `docker run --rm -v $(pwd):/app -w /app golang:1.25 go mod tidy`
+
 `docker run --rm -v $(pwd):/app -w /app golang:1.25 go get github.com/ilyakaznacheev/cleanenv`
 
-зайти посмотреть в контейнер
-`docker compose run --rm go-app sh`
+### генерация моков
 
-dev режим
+`cd docker`
+
+`make generate`
+
+### dev режим
+
 `docker compose up go-dev --build`
+
 `docker compose exec go-dev sh`
