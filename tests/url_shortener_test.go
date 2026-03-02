@@ -15,7 +15,9 @@ import (
 )
 
 const (
-	host = "localhost:8082"
+	host     = "localhost:8082"
+	user     = "admin"
+	password = "admin"
 )
 
 func TestURLShortener_HappyPath(t *testing.T) {
@@ -30,7 +32,7 @@ func TestURLShortener_HappyPath(t *testing.T) {
 			URL:   gofakeit.URL(),
 			Alias: random.NewRandomString(10),
 		}).
-		WithBasicAuth("myuser", "mypass").
+		WithBasicAuth(user, password).
 		Expect().
 		Status(200).
 		JSON().Object().
@@ -80,7 +82,7 @@ func TestURLShortener_SaveRedirect(t *testing.T) {
 					URL:   tc.url,
 					Alias: tc.alias,
 				}).
-				WithBasicAuth("myuser", "mypass").
+				WithBasicAuth(user, password).
 				Expect().Status(http.StatusOK).
 				JSON().Object()
 
