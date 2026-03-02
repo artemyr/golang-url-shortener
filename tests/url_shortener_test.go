@@ -3,6 +3,7 @@ package tests
 import (
 	"net/http"
 	"net/url"
+	"path"
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
@@ -27,7 +28,7 @@ func TestURLShortener_HappyPath(t *testing.T) {
 	}
 	e := httpexpect.Default(t, u.String())
 
-	e.POST("/url").
+	resp := e.POST("/url").
 		WithJSON(save.Request{
 			URL:   gofakeit.URL(),
 			Alias: random.NewRandomString(10),
@@ -37,10 +38,23 @@ func TestURLShortener_HappyPath(t *testing.T) {
 		Status(200).
 		JSON().Object().
 		ContainsKey("alias")
+
+	resp.Value("alias").String().NotEmpty()
+
+	alias := resp.Value("alias").String().Raw()
+
+	reqDel := e.DELETE("/"+path.Join("url", alias)).
+		WithBasicAuth(user, password).
+		Expect().Status(http.StatusOK).
+		JSON().Object()
+
+	reqDel.Value("status").String().IsEqual("OK")
+
+	testRedirectNotFound(t, alias)
 }
 
 //nolint:funlen
-func TestURLShortener_SaveRedirect(t *testing.T) {
+func TestURLShortener_SaveRedirectRemove(t *testing.T) {
 	testCases := []struct {
 		name  string
 		url   string
@@ -107,6 +121,19 @@ func TestURLShortener_SaveRedirect(t *testing.T) {
 			// Redirect
 
 			testRedirect(t, alias, tc.url)
+
+			// Remove
+
+			reqDel := e.DELETE("/"+path.Join("url", alias)).
+				WithBasicAuth(user, password).
+				Expect().Status(http.StatusOK).
+				JSON().Object()
+
+			reqDel.Value("status").String().IsEqual("OK")
+
+			// Redirect again
+
+			testRedirectNotFound(t, alias)
 		})
 	}
 }
@@ -122,4 +149,15 @@ func testRedirect(t *testing.T, alias string, urlToRedirect string) {
 	require.NoError(t, err)
 
 	require.Equal(t, urlToRedirect, redirectedToURL)
+}
+
+func testRedirectNotFound(t *testing.T, alias string) {
+	u := url.URL{
+		Scheme: "http",
+		Host:   host,
+		Path:   alias,
+	}
+
+	_, err := api.GetRedirect(u.String())
+	require.ErrorIs(t, err, api.ErrInvalidStatusCode)
 }
