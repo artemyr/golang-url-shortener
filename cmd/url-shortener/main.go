@@ -54,11 +54,11 @@ func main() {
 			cfg.HTTPServer.User: cfg.HTTPServer.Password,
 		}))
 
-		router.Post("/", save.New(log, storage))
-		router.Delete("/{alias}", delete.New(log, storage))
+		r.Post("/", save.New(log, storage))
+		r.Delete("/{alias}", delete.New(log, storage))
 	})
 
-	router.Get("/url/get/{alias}", redirect.New(log, storage))
+	router.Get("/url/{alias}", redirect.New(log, storage))
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 
